@@ -1,7 +1,9 @@
+
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useToast } from "@/hooks/use-toast";
+import { historicalData } from '@/data/historical-aapl';
 
 const MAX_DATA_POINTS = 50;
 const INITIAL_PRICE = 150;
@@ -24,6 +26,13 @@ interface MacdData {
     macd?: number;
     signal?: number;
     histogram?: number;
+}
+
+export interface ReplayState {
+    isPlaying: boolean;
+    speed: number;
+    currentIndex: number;
+    total: number;
 }
 
 const calculateMA = (data: number[], windowSize: number): number | undefined => {
@@ -55,49 +64,123 @@ const calculateEMA = (data: number[], period: number): number[] => {
     return emaArray;
 }
 
-export const useMarketData = () => {
-  const [marketData, setMarketData] = useState<MarketDataPoint[]>([]);
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const initialData: MarketDataPoint[] = Array.from({ length: MAX_DATA_POINTS }, (_, i) => {
+const generateInitialLiveDate = () => {
+    return Array.from({ length: MAX_DATA_POINTS }, (_, i) => {
       const price = INITIAL_PRICE + (Math.random() - 0.5) * 5 + i * 0.2;
       return {
         time: new Date(Date.now() - (MAX_DATA_POINTS - i) * 1000).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         price: parseFloat(price.toFixed(2)),
       };
     });
-    setMarketData(initialData);
+}
 
-    const interval = setInterval(() => {
-      setMarketData(prevData => {
-        const lastPrice = prevData.length > 0 ? prevData[prevData.length - 1].price : INITIAL_PRICE;
-        const newPrice = lastPrice + (Math.random() - 0.49) * 2;
-        const newDataPoint: MarketDataPoint = {
-          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-          price: parseFloat(newPrice.toFixed(2)),
-        };
+export const useMarketData = () => {
+  const [marketData, setMarketData] = useState<MarketDataPoint[]>([]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
+  const [mode, setMode] = useState<'live' | 'historical'>('live');
+  const [replayState, setReplayState] = useState<ReplayState>({
+      isPlaying: false,
+      speed: 1,
+      currentIndex: 0,
+      total: historicalData.length
+  });
 
-        const updatedData = [...prevData, newDataPoint].slice(-MAX_DATA_POINTS);
-        
-        const prices = updatedData.map(p => p.price);
-        const ma50 = calculateMA(prices, 50);
-        
-        if (ma50 && updatedData.length > 0) {
-            updatedData[updatedData.length - 1].ma50 = parseFloat(ma50.toFixed(2));
-        }
+  const { toast } = useToast();
+  const liveIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const replayIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
-        return updatedData;
-      });
+  const processNewDataPoint = (newDataPoint: MarketDataPoint) => {
+    setMarketData(prevData => {
+      const updatedData = [...prevData, newDataPoint].slice(-MAX_DATA_POINTS);
+      const prices = updatedData.map(p => p.price);
+      const ma50 = calculateMA(prices, 50);
+      if (ma50 && updatedData.length > 0) {
+          updatedData[updatedData.length - 1].ma50 = parseFloat(ma50.toFixed(2));
+      }
+      return updatedData;
+    });
+  };
+
+  const startLiveMode = useCallback(() => {
+    if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+    if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+    
+    setMarketData(generateInitialLiveDate());
+
+    liveIntervalRef.current = setInterval(() => {
+        setMarketData(prevData => {
+            const lastPrice = prevData.length > 0 ? prevData[prevData.length - 1].price : INITIAL_PRICE;
+            const newPrice = lastPrice + (Math.random() - 0.49) * 2;
+            const newDataPoint: MarketDataPoint = {
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+                price: parseFloat(newPrice.toFixed(2)),
+            };
+            const updatedData = [...prevData, newDataPoint].slice(-MAX_DATA_POINTS);
+            const prices = updatedData.map(p => p.price);
+            const ma50 = calculateMA(prices, 50);
+            if (ma50 && updatedData.length > 0) {
+                updatedData[updatedData.length - 1].ma50 = parseFloat(ma50.toFixed(2));
+            }
+            return updatedData;
+        });
     }, 1200);
+  }, []);
 
-    return () => clearInterval(interval);
+  const startHistoricalMode = useCallback(() => {
+    if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+    if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+    
+    const initialHistData = historicalData.slice(0, MAX_DATA_POINTS).map(d => ({
+        time: new Date(d.Date).toLocaleTimeString(),
+        price: d.Close
+    }));
+    setMarketData(initialHistData);
+    setReplayState(prev => ({ ...prev, isPlaying: true, currentIndex: MAX_DATA_POINTS }));
+
   }, []);
 
   useEffect(() => {
-    if (marketData.length < 2) return;
+    if (mode === 'live') {
+      startLiveMode();
+    } else {
+      startHistoricalMode();
+    }
+    return () => {
+      if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+      if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+    };
+  }, [mode, startLiveMode, startHistoricalMode]);
 
+  useEffect(() => {
+    if (mode === 'historical' && replayState.isPlaying) {
+      if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+      replayIntervalRef.current = setInterval(() => {
+        setReplayState(prev => {
+          if (prev.currentIndex >= historicalData.length -1) {
+            if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+            return { ...prev, isPlaying: false };
+          }
+          const nextIndex = prev.currentIndex + 1;
+          const point = historicalData[nextIndex];
+          const newDataPoint: MarketDataPoint = {
+            time: new Date(point.Date).toLocaleTimeString(),
+            price: point.Close
+          };
+          processNewDataPoint(newDataPoint);
+          return { ...prev, currentIndex: nextIndex };
+        });
+      }, 1000 / replayState.speed);
+    } else if (replayIntervalRef.current) {
+        clearInterval(replayIntervalRef.current);
+    }
+    return () => {
+        if (replayIntervalRef.current) clearInterval(replayIntervalRef.current);
+    }
+  }, [mode, replayState.isPlaying, replayState.speed]);
+
+
+  useEffect(() => {
+    if (marketData.length < 2) return;
     const latestPrice = marketData[marketData.length - 1].price;
     alerts.forEach(alert => {
       if (!alert.triggered) {
@@ -114,8 +197,17 @@ export const useMarketData = () => {
   }, [marketData, alerts, toast]);
 
   const { latestData, priceChange, nonTriggeredAlertsCount, volatility, macd } = useMemo(() => {
+    if (marketData.length === 0) {
+        return {
+            latestData: { price: 0, time: '' },
+            priceChange: { value: 0, percentage: '0.00' },
+            nonTriggeredAlertsCount: 0,
+            volatility: undefined,
+            macd: {}
+        };
+    }
     const latest = marketData[marketData.length - 1];
-    const previous = marketData[marketData.length - 2];
+    const previous = marketData.length > 1 ? marketData[marketData.length - 2] : latest;
     
     let change = { value: 0, percentage: '0.00' };
     if (latest && previous) {
@@ -125,11 +217,10 @@ export const useMarketData = () => {
     }
     
     const alertsCount = alerts.filter(a => !a.triggered).length;
-
-    const currentVolatility = calculateVolatility(marketData.map(p => p.price), VOLATILITY_WINDOW);
+    const prices = marketData.map(p => p.price);
+    const currentVolatility = calculateVolatility(prices, VOLATILITY_WINDOW);
 
     let macdData: MacdData = {};
-    const prices = marketData.map(p => p.price);
     if (prices.length >= 26) {
         const ema12 = calculateEMA(prices, 12);
         const ema26 = calculateEMA(prices, 26);
@@ -143,7 +234,6 @@ export const useMarketData = () => {
             histogram: histogram[histogram.length -1],
         }
     }
-
 
     return { 
         latestData: latest, 
@@ -162,6 +252,33 @@ export const useMarketData = () => {
     };
     setAlerts(prev => [...prev, newAlert]);
   }, []);
+  
+  const togglePlayback = useCallback(() => {
+    setReplayState(prev => ({...prev, isPlaying: !prev.isPlaying}))
+  }, []);
 
-  return { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility, macd };
+  const setReplaySpeed = useCallback((speed: number) => {
+    setReplayState(prev => ({...prev, speed}));
+  }, []);
+
+  const resetReplay = useCallback(() => {
+      startHistoricalMode();
+  }, [startHistoricalMode]);
+
+
+  return { 
+      marketData, 
+      latestData, 
+      priceChange, 
+      nonTriggeredAlertsCount, 
+      handleAddAlert, 
+      volatility, 
+      macd,
+      mode,
+      setMode,
+      replayState,
+      togglePlayback,
+      setReplaySpeed,
+      resetReplay
+    };
 };

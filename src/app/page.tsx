@@ -2,6 +2,8 @@ import DashboardPage from '@/components/dashboard-page';
 
 export default function Home() {
   return (
-    <DashboardPage />
+    <div className="bg-background">
+      <DashboardPage />
+    </div>
   );
 }

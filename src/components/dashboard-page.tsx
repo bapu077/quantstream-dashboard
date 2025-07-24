@@ -10,11 +10,26 @@ import { MarketChart } from './market-chart';
 import { DashboardControls } from './dashboard-controls';
 import { TradeSimulator } from './trade-simulator';
 import { TradeHistoryTable } from './trade-history-table';
-import { Separator } from './ui/separator';
+import { HistoricalReplayControls } from './historical-replay-controls';
 
 const DashboardPage = () => {
   const [showMA50, setShowMA50] = useState(true);
-  const { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility, macd } = useMarketData();
+  const { 
+    marketData, 
+    latestData, 
+    priceChange, 
+    nonTriggeredAlertsCount, 
+    handleAddAlert, 
+    volatility, 
+    macd,
+    mode,
+    setMode,
+    replayState,
+    togglePlayback,
+    setReplaySpeed,
+    resetReplay
+  } = useMarketData();
+  
   const {
     balance,
     holdings,
@@ -80,6 +95,14 @@ const DashboardPage = () => {
               showMA50={showMA50}
               onShowMA50Change={setShowMA50}
               onAddAlert={handleAddAlert}
+            />
+            <HistoricalReplayControls
+              mode={mode}
+              onModeChange={setMode}
+              replayState={replayState}
+              onTogglePlayback={togglePlayback}
+              onSpeedChange={setReplaySpeed}
+              onReset={resetReplay}
             />
              <TradeSimulator
                 currentPrice={latestData?.price}
