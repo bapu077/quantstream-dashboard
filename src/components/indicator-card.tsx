@@ -15,7 +15,9 @@ export const IndicatorCard = ({ title, value, change, changeColor, unit }: Indic
     </CardHeader>
     <CardContent>
       <div className="text-3xl font-bold">
-        {unit}{value}
+        {unit && unit !== '$' && <span className="text-muted-foreground text-2xl mr-1">{unit}</span>}
+        {unit === '$' && <span>{unit}</span>}
+        {value}
       </div>
       {change && (
         <p className={`text-xs ${changeColor || 'text-muted-foreground'}`}>
