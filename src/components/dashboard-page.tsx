@@ -17,7 +17,9 @@ const DashboardPage = () => {
   const { 
     marketData, 
     latestData, 
-    priceChange, 
+    priceChange,
+    volatility,
+    macd,
     nonTriggeredAlertsCount, 
     handleAddAlert,
     mode,
@@ -49,14 +51,20 @@ const DashboardPage = () => {
             title="Current Price"
             value={latestData?.price.toFixed(2) ?? '0.00'}
             unit="$"
-            change={`${priceChange.value >= 0 ? '+' : ''}${priceChange.value} (${priceChange.percentage}%)`}
+            change={`${priceChange.value >= 0 ? '+' : ''}${priceChange.value.toFixed(2)} (${priceChange.percentage}%)`}
             changeType={priceChange.value >= 0 ? 'positive' : 'negative'}
           />
+           <IndicatorCard
+            title="Volatility (14d)"
+            value={volatility?.toFixed(4) ?? 'N/A'}
+            subtitle="Std. Dev of Price"
+          />
           <IndicatorCard
-            title="Total Equity"
-            value={totalValue.toFixed(2)}
-            unit="$"
-            subtitle="Portfolio + Cash"
+            title="MACD"
+            value={macd?.macd?.toFixed(2) ?? 'N/A'}
+            subtitle={`Signal: ${macd?.signal?.toFixed(2) ?? 'N/A'}`}
+            change={macd?.histogram?.toFixed(2)}
+            changeType={macd?.histogram && macd.histogram >= 0 ? 'positive' : 'negative'}
           />
            <IndicatorCard
             title="Realized P/L"
@@ -69,10 +77,6 @@ const DashboardPage = () => {
             value={holdings.toFixed(4)}
             unit="shares"
             subtitle={`Value: $${portfolioValue.toFixed(2)}`}
-          />
-           <IndicatorCard
-            title="Active Alerts"
-            value={nonTriggeredAlertsCount}
           />
         </div>
         <div className="grid gap-4 md:gap-6 lg:grid-cols-3 items-start">
