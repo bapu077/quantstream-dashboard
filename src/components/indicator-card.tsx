@@ -15,10 +15,10 @@ export const IndicatorCard = ({ title, value, subtitle, change, changeColor, uni
       <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
     </CardHeader>
     <CardContent>
-      <div className="text-3xl font-bold">
-        {unit && unit !== '$' && <span className="text-muted-foreground text-2xl mr-1">{unit}</span>}
+      <div className={`text-3xl font-bold ${changeColor || ''}`}>
         {unit === '$' && <span>{unit}</span>}
         {value}
+        {unit && unit !== '$' && <span className="text-muted-foreground text-xl ml-1">{unit}</span>}
       </div>
        {subtitle && (
         <p className="text-xs text-muted-foreground">{subtitle}</p>

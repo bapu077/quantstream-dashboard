@@ -1,21 +1,37 @@
+
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { useMarketData } from '@/hooks/use-market-data';
+import { useTradingSimulator } from '@/hooks/use-trading-simulator';
 import { DashboardHeader } from './dashboard-header';
 import { IndicatorCard } from './indicator-card';
 import { MarketChart } from './market-chart';
 import { DashboardControls } from './dashboard-controls';
+import { TradeSimulator } from './trade-simulator';
+import { TradeHistoryTable } from './trade-history-table';
+import { Separator } from './ui/separator';
 
 const DashboardPage = () => {
   const [showMA50, setShowMA50] = useState(true);
   const { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility, macd } = useMarketData();
+  const {
+    balance,
+    holdings,
+    portfolioValue,
+    totalValue,
+    realizedPnl,
+    trades,
+    buy,
+    sell,
+  } = useTradingSimulator(latestData?.price);
+
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <DashboardHeader />
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-7">
           <IndicatorCard
             title="Current Price"
             value={latestData?.price.toFixed(2) ?? '0.00'}
@@ -24,19 +40,30 @@ const DashboardPage = () => {
             changeColor={priceChange.value >= 0 ? 'text-accent' : 'text-destructive'}
           />
           <IndicatorCard
-            title="50-Period MA"
-            value={latestData?.ma50?.toFixed(2) ?? 'N/A'}
+            title="Portfolio Value"
+            value={portfolioValue.toFixed(2)}
             unit="$"
           />
            <IndicatorCard
-            title="MACD"
-            value={macd?.macd?.toFixed(2) ?? 'N/A'}
-            subtitle={`Signal: ${macd?.signal?.toFixed(2) ?? 'N/A'}`}
+            title="Cash Balance"
+            value={balance.toFixed(2)}
+            unit="$"
           />
           <IndicatorCard
-            title="Volatility (14d)"
-            value={volatility?.toFixed(2) ?? 'N/A'}
-            unit="σ"
+            title="Total Equity"
+            value={totalValue.toFixed(2)}
+            unit="$"
+          />
+           <IndicatorCard
+            title="Realized P/L"
+            value={realizedPnl.toFixed(2)}
+            unit="$"
+            changeColor={realizedPnl >= 0 ? 'text-accent' : 'text-destructive'}
+          />
+           <IndicatorCard
+            title="Holdings"
+            value={holdings.toFixed(4)}
+            unit="shares"
           />
            <IndicatorCard
             title="Active Alerts"
@@ -44,15 +71,23 @@ const DashboardPage = () => {
           />
         </div>
         <div className="grid gap-4 md:gap-6 lg:grid-cols-3 items-start">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-6">
             <MarketChart data={marketData} showMA50={showMA50} />
+            <TradeHistoryTable trades={trades} />
           </div>
-          <div className="lg:col-span-1">
+          <div className="lg:col-span-1 space-y-6">
             <DashboardControls
               showMA50={showMA50}
               onShowMA50Change={setShowMA50}
               onAddAlert={handleAddAlert}
             />
+             <TradeSimulator
+                currentPrice={latestData?.price}
+                onBuy={buy}
+                onSell={sell}
+                balance={balance}
+                holdings={holdings}
+              />
           </div>
         </div>
       </main>
