@@ -9,13 +9,13 @@ import { DashboardControls } from './dashboard-controls';
 
 const DashboardPage = () => {
   const [showMA50, setShowMA50] = useState(true);
-  const { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility } = useMarketData();
+  const { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility, macd } = useMarketData();
 
   return (
     <div className="flex flex-col h-screen overflow-hidden">
       <DashboardHeader />
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
           <IndicatorCard
             title="Current Price"
             value={latestData?.price.toFixed(2) ?? '0.00'}
@@ -27,6 +27,11 @@ const DashboardPage = () => {
             title="50-Period MA"
             value={latestData?.ma50?.toFixed(2) ?? 'N/A'}
             unit="$"
+          />
+           <IndicatorCard
+            title="MACD"
+            value={macd?.macd?.toFixed(2) ?? 'N/A'}
+            subtitle={`Signal: ${macd?.signal?.toFixed(2) ?? 'N/A'}`}
           />
           <IndicatorCard
             title="Volatility (14d)"

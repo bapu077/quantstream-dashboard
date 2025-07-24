@@ -3,12 +3,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 interface IndicatorCardProps {
   title: string;
   value: string | number;
+  subtitle?: string;
   change?: string;
   changeColor?: 'text-accent' | 'text-destructive';
   unit?: string;
 }
 
-export const IndicatorCard = ({ title, value, change, changeColor, unit }: IndicatorCardProps) => (
+export const IndicatorCard = ({ title, value, subtitle, change, changeColor, unit }: IndicatorCardProps) => (
   <Card>
     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
       <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
@@ -19,6 +20,9 @@ export const IndicatorCard = ({ title, value, change, changeColor, unit }: Indic
         {unit === '$' && <span>{unit}</span>}
         {value}
       </div>
+       {subtitle && (
+        <p className="text-xs text-muted-foreground">{subtitle}</p>
+      )}
       {change && (
         <p className={`text-xs ${changeColor || 'text-muted-foreground'}`}>
           {change}

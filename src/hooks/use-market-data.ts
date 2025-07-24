@@ -20,6 +20,12 @@ interface Alert {
   triggered: boolean;
 }
 
+interface MacdData {
+    macd?: number;
+    signal?: number;
+    histogram?: number;
+}
+
 const calculateMA = (data: number[], windowSize: number): number | undefined => {
   if (data.length < windowSize) return undefined;
   const slice = data.slice(-windowSize);
@@ -36,6 +42,18 @@ const calculateVolatility = (data: number[], windowSize: number): number | undef
     return Math.sqrt(variance);
 };
 
+const calculateEMA = (data: number[], period: number): number[] => {
+    const k = 2 / (period + 1);
+    const emaArray: number[] = [];
+    if (data.length > 0) {
+        emaArray.push(data[0]);
+        for (let i = 1; i < data.length; i++) {
+            const ema = data[i] * k + emaArray[i - 1] * (1 - k);
+            emaArray.push(ema);
+        }
+    }
+    return emaArray;
+}
 
 export const useMarketData = () => {
   const [marketData, setMarketData] = useState<MarketDataPoint[]>([]);
@@ -95,7 +113,7 @@ export const useMarketData = () => {
     });
   }, [marketData, alerts, toast]);
 
-  const { latestData, priceChange, nonTriggeredAlertsCount, volatility } = useMemo(() => {
+  const { latestData, priceChange, nonTriggeredAlertsCount, volatility, macd } = useMemo(() => {
     const latest = marketData[marketData.length - 1];
     const previous = marketData[marketData.length - 2];
     
@@ -110,7 +128,30 @@ export const useMarketData = () => {
 
     const currentVolatility = calculateVolatility(marketData.map(p => p.price), VOLATILITY_WINDOW);
 
-    return { latestData: latest, priceChange: change, nonTriggeredAlertsCount: alertsCount, volatility: currentVolatility };
+    let macdData: MacdData = {};
+    const prices = marketData.map(p => p.price);
+    if (prices.length >= 26) {
+        const ema12 = calculateEMA(prices, 12);
+        const ema26 = calculateEMA(prices, 26);
+        const macdLine = ema12.map((val, index) => val - ema26[index]);
+        const signalLine = calculateEMA(macdLine, 9);
+        const histogram = macdLine.map((val, index) => val - signalLine[index]);
+
+        macdData = {
+            macd: macdLine[macdLine.length -1],
+            signal: signalLine[signalLine.length - 1],
+            histogram: histogram[histogram.length -1],
+        }
+    }
+
+
+    return { 
+        latestData: latest, 
+        priceChange: change, 
+        nonTriggeredAlertsCount: alertsCount, 
+        volatility: currentVolatility,
+        macd: macdData
+    };
   }, [marketData, alerts]);
 
   const handleAddAlert = useCallback((alert: { type: 'above' | 'below', value: number }) => {
@@ -122,5 +163,5 @@ export const useMarketData = () => {
     setAlerts(prev => [...prev, newAlert]);
   }, []);
 
-  return { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility };
+  return { marketData, latestData, priceChange, nonTriggeredAlertsCount, handleAddAlert, volatility, macd };
 };
