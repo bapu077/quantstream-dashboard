@@ -19,9 +19,7 @@ const DashboardPage = () => {
     latestData, 
     priceChange, 
     nonTriggeredAlertsCount, 
-    handleAddAlert, 
-    volatility, 
-    macd,
+    handleAddAlert,
     mode,
     setMode,
     replayState,
@@ -46,39 +44,31 @@ const DashboardPage = () => {
     <div className="flex flex-col h-screen overflow-hidden">
       <DashboardHeader />
       <main className="flex-1 p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto">
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5 xl:grid-cols-7">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
           <IndicatorCard
             title="Current Price"
             value={latestData?.price.toFixed(2) ?? '0.00'}
             unit="$"
             change={`${priceChange.value >= 0 ? '+' : ''}${priceChange.value} (${priceChange.percentage}%)`}
-            changeColor={priceChange.value >= 0 ? 'text-accent' : 'text-destructive'}
-          />
-          <IndicatorCard
-            title="Portfolio Value"
-            value={portfolioValue.toFixed(2)}
-            unit="$"
-          />
-           <IndicatorCard
-            title="Cash Balance"
-            value={balance.toFixed(2)}
-            unit="$"
+            changeType={priceChange.value >= 0 ? 'positive' : 'negative'}
           />
           <IndicatorCard
             title="Total Equity"
             value={totalValue.toFixed(2)}
             unit="$"
+            subtitle="Portfolio + Cash"
           />
            <IndicatorCard
             title="Realized P/L"
             value={realizedPnl.toFixed(2)}
             unit="$"
-            changeColor={realizedPnl >= 0 ? 'text-accent' : 'text-destructive'}
+            changeType={realizedPnl >= 0 ? 'positive' : 'negative'}
           />
            <IndicatorCard
             title="Holdings"
             value={holdings.toFixed(4)}
             unit="shares"
+            subtitle={`Value: $${portfolioValue.toFixed(2)}`}
           />
            <IndicatorCard
             title="Active Alerts"
